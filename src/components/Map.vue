@@ -6,7 +6,7 @@
 
 <script>
 export default {
-  name: 'Trend',
+  name: 'Map',
   components: {},
   props: {},
   data() {
@@ -69,24 +69,16 @@ export default {
     },
     // !获取服务器数据
     async getData() {
-      const { data: res } = await this.$api.get('trend')
+      const { data: res } = await this.$api.get('map')
       this.allData = res
       this.updateChart()
     },
     // !更新图表
     updateChart() {
-      const dataOption = {
-        xAxis: {
-          data: timeArr
-        },
-        legend: {
-          data: legendArr
-        },
-        series: seriesArr
-      }
+      const dataOption = {}
       this.chartInstance.setOption(dataOption)
     },
-   
+
     // !屏幕适配
     screenAdapter() {
       this.titleFontSize = (this.$refs.trend_ref.offsetWidth / 100) * 3.6
