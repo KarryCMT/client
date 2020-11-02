@@ -5,7 +5,7 @@ const theme = {
     // 标题的文字颜色
     titleColor: '#ffffff',
     // 左上角logo的图标路径
-    logoSrc: 'logo_dark.png',
+    logoSrc: '',
     // 切换主题按钮的图片路径
     themeSrc: 'qiehuan_dark.png',
     // 页面顶部的边框图片
