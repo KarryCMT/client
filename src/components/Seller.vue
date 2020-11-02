@@ -6,8 +6,9 @@
 </template>
 
 <script>
+import { mapState } from 'vuex'
 export default {
-  data() {
+  data () {
     return {
       chartInstance: null,
       allData: null, // 服务器返回的数据
@@ -16,24 +17,33 @@ export default {
       timerId: null // 定时器的标识
     }
   },
-  created() {},
-  mounted() {
+  created () {
+    // 在组件创建完成之后 进行回调函数的注册
+    this.$socket.registerCallBack('sellerData', this.getData)
+  },
+  mounted () {
     this.initChart()
-    this.getData()
-
+    // this.getData()
+    this.$socket.send({
+      action: 'getData',
+      socketType: 'sellerData',
+      chartName: 'seller',
+      value: ''
+    })
     window.addEventListener('resize', this.screenAdapter)
     // 在页面加载完成的时候, 主动进行屏幕的适配
     this.screenAdapter()
   },
-  destroyed() {
+  destroyed () {
     clearInterval(this.timerId)
     // 在组件销毁的时候, 需要将监听器取消掉
     window.removeEventListener('resize', this.screenAdapter)
+    this.$socket.unRegisterCallBack('sellerData')
   },
   methods: {
     // 初始化echartInstance对象
-    initChart() {
-      this.chartInstance = this.$echarts.init(this.$refs.seller_ref, 'chalk')
+    initChart () {
+      this.chartInstance = this.$echarts.init(this.$refs.seller_ref, this.theme)
       // 对图表初始化配置的控制
       const initOption = {
         title: {
@@ -103,32 +113,29 @@ export default {
       })
     },
     // 获取服务器的数据
-    async getData() {
-      const { data: res } = await this.$api.get('seller')
-      console.log(res)
-      this.allData = res
+    getData (ret) {
+      // http://127.0.0.1:8888/api/seller
+      // const { data: ret } = await this.$http.get('seller')
+      this.allData = ret
       // 对数据排序
       this.allData.sort((a, b) => {
         return a.value - b.value // 从小到大的排序
       })
       // 每5个元素显示一页
-      this.totalPage =
-        this.allData.length % 5 === 0
-          ? this.allData.length / 5
-          : this.allData.length / 5 + 1
+      this.totalPage = this.allData.length % 5 === 0 ? this.allData.length / 5 : this.allData.length / 5 + 1
       this.updateChart()
       // 启动定时器
       this.startInterval()
     },
     // 更新图表
-    updateChart() {
+    updateChart () {
       const start = (this.currentPage - 1) * 5
       const end = this.currentPage * 5
       const showData = this.allData.slice(start, end)
-      const sellerNames = showData.map(item => {
+      const sellerNames = showData.map((item) => {
         return item.name
       })
-      const sellerValues = showData.map(item => {
+      const sellerValues = showData.map((item) => {
         return item.value
       })
       const dataOption = {
@@ -143,7 +150,7 @@ export default {
       }
       this.chartInstance.setOption(dataOption)
     },
-    startInterval() {
+    startInterval () {
       if (this.timerId) {
         clearInterval(this.timerId)
       }
@@ -156,9 +163,9 @@ export default {
       }, 3000)
     },
     // 当浏览器的大小发生变化的时候, 会调用的方法, 来完成屏幕的适配
-    screenAdapter() {
+    screenAdapter () {
       // console.log(this.$refs.seller_ref.offsetWidth)
-      const titleFontSize = (this.$refs.seller_ref.offsetWidth / 100) * 3.6
+      const titleFontSize = this.$refs.seller_ref.offsetWidth / 100 * 3.6
       // 和分辨率大小相关的配置项
       const adapterOption = {
         title: {
@@ -187,9 +194,20 @@ export default {
       this.chartInstance.resize()
     }
   },
-  computed: {},
-  watch: {}
+  computed: {
+    ...mapState(['theme'])
+  },
+  watch: {
+    theme () {
+      console.log('主题切换了')
+      this.chartInstance.dispose() // 销毁当前的图表
+      this.initChart() // 重新以最新的主题名称初始化图表对象
+      this.screenAdapter() // 完成屏幕的适配
+      this.updateChart() // 更新图表的展示
+    }
+  }
 }
 </script>
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+</style>

@@ -1,40 +1,24 @@
-import Vue from "vue";
-import VueRouter from "vue-router";
+import Vue from 'vue'
+import VueRouter from 'vue-router'
 
-Vue.use(VueRouter);
+Vue.use(VueRouter)
 
 const routes = [
   {
-    path: "/trend",
-    name: "Trend",
-    component: () => import("@/views/TrendPage.vue"),
+    path: '/',
+    redirect: '/screen'
   },
   {
-    path: "/map",
-    name: "Map",
-    component: () => import("@/views/MapPage.vue"),
-  },
-  {
-    path: "/seller",
-    name: "Seller",
-    component: () => import("@/views/SellerPage.vue"),
-  },
-  {
-    path: "/rank",
-    name: "Rank",
-    component: () => import("@/views/RankPage.vue"),
-  },
-  {
-    path: "/",
-    name: "Hot",
-    component: () => import("@/views/HotPage.vue"),
-  },
-];
+    path: '/screen',
+    name: 'Screen',
+    component: () => import('@/views/ScreenPage.vue')
+  }
+]
 
 const router = new VueRouter({
-  mode: "history",
+  mode: 'history',
   base: process.env.BASE_URL,
-  routes,
-});
+  routes
+})
 
-export default router;
+export default router

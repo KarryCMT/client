@@ -1,89 +1,132 @@
+<!-- 热销商品图表 -->
 <template>
-  <div class="com-container">
-    <div class="com-chart" ref="hot_ref"></div>
+  <div class='com-container'>
+    <div class='com-chart' ref='hot_ref'></div>
+    <span class="iconfont arr-left" @click="toLeft" :style="comStyle">&#xe6ef;</span>
+    <span class="iconfont arr-right" @click="toRight" :style="comStyle">&#xe6ed;</span>
+    <span class="cat-name" :style="comStyle">{{ catName }}</span>
   </div>
 </template>
 
 <script>
+import { mapState } from 'vuex'
+import { getThemeValue } from '@/utils/theme_utils'
 export default {
-  components: {},
-  props: {},
-  data() {
+  data () {
     return {
+      chartInstance: null,
       allData: null,
-      timerId: null
+      currentIndex: 0, // 当前所展示出的一级分类数据
+      titleFontSize: 0
     }
   },
-  created() {},
-  watch: {},
-  computed: {},
-  mounted() {
+  created () {
+    // 在组件创建完成之后 进行回调函数的注册
+    this.$socket.registerCallBack('hotData', this.getData)
+  },
+  computed: {
+    catName () {
+      if (!this.allData) {
+        return ''
+      } else {
+        return this.allData[this.currentIndex].name
+      }
+    },
+    comStyle () {
+      return {
+        fontSize: this.titleFontSize + 'px',
+        color: getThemeValue(this.theme).titleColor
+      }
+    },
+    ...mapState(['theme'])
+  },
+  mounted () {
     this.initChart()
-    this.getData()
+    // this.getData()
+    this.$socket.send({
+      action: 'getData',
+      socketType: 'hotData',
+      chartName: 'hot',
+      value: ''
+    })
     window.addEventListener('resize', this.screenAdapter)
-    // 在页面加载完成的时候, 主动进行屏幕的适配
     this.screenAdapter()
   },
-  destroyed() {
-    clearInterval(this.timerId)
-    // 在组件销毁的时候, 需要将监听器取消掉
+  destroyed () {
     window.removeEventListener('resize', this.screenAdapter)
+    this.$socket.unRegisterCallBack('hotData')
   },
   methods: {
-    initChart() {
-      this.chartInstance = this.$echarts.init(this.$refs.hot_ref, 'chalk')
-      // 对图表初始化配置的控制
+    initChart () {
+      this.chartInstance = this.$echarts.init(this.$refs.hot_ref, this.theme)
       const initOption = {
-        // title: {
-        //   text: '▎地区销售排行',
-        //   left: 20,
-        //   top: 20
-        // },
-        // grid: {
-        //   top: '40%',
-        //   left: '5%',
-        //   right: '5%',
-        //   bottom: '5%',
-        //   containLabel: true // 距离是包含坐标轴上的文字
-        // },
-        // tooltip: {
-        //   show: true
-        // },
+        title: {
+          text: '▎ 热销商品的占比',
+          left: 20,
+          top: 20
+        },
+        legend: {
+          top: '15%',
+          icon: 'circle'
+        },
+        tooltip: {
+          show: true,
+          formatter: arg => {
+            // console.log(arg)
+            const thirdCategory = arg.data.children
+            // 计算出所有三级分类的数值总和
+            let total = 0
+            thirdCategory.forEach(item => {
+              total += item.value
+            })
+            let retStr = ''
+            thirdCategory.forEach(item => {
+              retStr += `
+              ${item.name}:${parseInt(item.value / total * 100) + '%'}
+              <br/>
+              `
+            })
+            return retStr
+          }
+        },
         series: [
           {
-            type: 'pie'
+            type: 'pie',
+            label: {
+              show: false
+            },
+            emphasis: {
+              label: {
+                show: true
+              },
+              labelLine: {
+                show: false
+              }
+            }
           }
         ]
       }
       this.chartInstance.setOption(initOption)
-      // 对图表对象进行鼠标事件的监听
-      this.chartInstance.on('mouseover', () => {
-        clearInterval(this.timerId)
-      })
-      this.chartInstance.on('mouseout', () => {
-        this.startInterval()
-      })
     },
-    async getData() {
-      const { data: res } = await this.$api.get('hot')
-      this.allData = res
+    getData (ret) {
+      // 获取服务器的数据, 对this.allData进行赋值之后, 调用updateChart方法更新图表
+      // const { data: ret } = await this.$http.get('hotproduct')
+      this.allData = ret
       console.log(this.allData)
-
       this.updateChart()
-      // 启动定时器
-      this.startInterval()
     },
-    updateChart() {
-      const legendData = this.allData[0].children.map(item => {
+    updateChart () {
+      // 处理图表需要的数据
+      const legendData = this.allData[this.currentIndex].children.map(item => {
         return item.name
       })
-      const seriesData = this.allData[0].children.map(item => {
+      const seriesData = this.allData[this.currentIndex].children.map(item => {
         return {
           name: item.name,
-          value: item.name
+          value: item.value,
+          children: item.children // 新增加children的原因是为了在tooltip中的formatter的回调函数中,来拿到这个二级分类下的三级分类数据
         }
       })
-      console.log(seriesData)
       const dataOption = {
         legend: {
           data: legendData
@@ -96,32 +139,80 @@ export default {
       }
       this.chartInstance.setOption(dataOption)
     },
-    startInterval() {},
-    screenAdapter() {
-      // console.log(this.$refs.seller_ref.offsetWidth)
-      const titleFontSize = (this.$refs.hot_ref.offsetWidth / 100) * 3.6
-      // 和分辨率大小相关的配置项
+    screenAdapter () {
+      this.titleFontSize = this.$refs.hot_ref.offsetWidth / 100 * 3.6
       const adapterOption = {
         title: {
           textStyle: {
-            fontSize: titleFontSize
+            fontSize: this.titleFontSize
+          }
+        },
+        legend: {
+          itemWidth: this.titleFontSize,
+          itemHeight: this.titleFontSize,
+          itemGap: this.titleFontSize / 2,
+          textStyle: {
+            fontSize: this.titleFontSize / 2
           }
         },
         series: [
           {
-            barWidth: titleFontSize,
-            itemStyle: {
-              barBorderRadius: [titleFontSize / 2, titleFontSize / 2, 0, 0]
-            }
+            radius: this.titleFontSize * 4.5,
+            center: ['50%', '60%']
           }
         ]
       }
       this.chartInstance.setOption(adapterOption)
-      // 手动的调用图表对象的resize 才能产生效果
       this.chartInstance.resize()
+    },
+    toLeft () {
+      this.currentIndex--
+      if (this.currentIndex < 0) {
+        this.currentIndex = this.allData.length - 1
+      }
+      this.updateChart()
+    },
+    toRight () {
+      this.currentIndex++
+      if (this.currentIndex > this.allData.length - 1) {
+        this.currentIndex = 0
+      }
+      this.updateChart()
+    }
+  },
+  watch: {
+    theme () {
+      console.log('主题切换了')
+      this.chartInstance.dispose() // 销毁当前的图表
+      this.initChart() // 重新以最新的主题名称初始化图表对象
+      this.screenAdapter() // 完成屏幕的适配
+      this.updateChart() // 更新图表的展示
     }
   }
 }
 </script>
 
-<style scoped></style>
+<style lang='less' scoped>
+.arr-left {
+  position:absolute;
+  left: 10%;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: white;
+}
+.arr-right {
+  position:absolute;
+  right: 10%;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: white;
+}
+.cat-name {
+  position:absolute;
+  left: 80%;
+  bottom: 20px;
+  color: white;
+}
+</style>

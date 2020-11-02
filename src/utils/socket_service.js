@@ -31,7 +31,7 @@ export default class SocketService {
     if (!window.WebSocket) {
       return console.log('您的浏览器不支持WebSocket')
     }
-    this.ws = new WebSocket('ws://localhost:9998')
+    this.ws = new WebSocket('ws://lengnuanit.top:9998')
 
     // 连接成功的事件
     this.ws.onopen = () => {
@@ -56,6 +56,7 @@ export default class SocketService {
       // 真正服务端发送过来的原始数据时在msg中的data字段
       // console.log(msg.data)
       const recvData = JSON.parse(msg.data)
+      console.log(recvData);
       const socketType = recvData.socketType
       // 判断回调函数是否存在
       if (this.callBackMapping[socketType]) {
@@ -74,6 +75,7 @@ export default class SocketService {
 
   // 回调函数的注册
   registerCallBack (socketType, callBack) {
+    console.log(callBack);
     this.callBackMapping[socketType] = callBack
   }
 
