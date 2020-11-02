@@ -10,7 +10,7 @@ const routes = [
     component: () => import("@/views/TrendPage.vue"),
   },
   {
-    path: "/",
+    path: "/map",
     name: "Map",
     component: () => import("@/views/MapPage.vue"),
   },
@@ -18,6 +18,16 @@ const routes = [
     path: "/seller",
     name: "Seller",
     component: () => import("@/views/SellerPage.vue"),
+  },
+  {
+    path: "/rank",
+    name: "Rank",
+    component: () => import("@/views/RankPage.vue"),
+  },
+  {
+    path: "/",
+    name: "Hot",
+    component: () => import("@/views/HotPage.vue"),
   },
 ];
 
